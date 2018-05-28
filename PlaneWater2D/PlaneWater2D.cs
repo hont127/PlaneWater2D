@@ -9,7 +9,7 @@ namespace Hont
 
     public class PlaneWater2D : MonoBehaviour
     {
-        public class MassPoint
+        class MassPoint
         {
             public int VertexIndex { get; set; }
             public Vector3 BaseVertexPosition { get; set; }
@@ -26,6 +26,7 @@ namespace Hont
         public Vector2 size = new Vector2(1, 1);
         [Tooltip("The mesh vertex segment number")]
         public int vertexSegment = 20;
+        public bool invertNormal;
         [Tooltip("The effect point interactable range")]
         public float interactableAreaRange = 0.2f;
         [Tooltip("At the calm state, water turbulent size scale.")]
@@ -41,8 +42,10 @@ namespace Hont
         [Tooltip("Vertex contact to wall spread attenuation")]
         public float vertexSpreadAtte_ContactToWall = 0.8f;
         public List<EffectPoint> effectPointList;
+        public bool cameraInvisibleOptimize = true;
         public bool isDrawGizmos = true;
 
+        bool mOnBecameVisible;
         Rect mInteractArea;
         List<MassPoint> mMassPointList;
         Vector3[] mCacheVerticesArray;
@@ -61,9 +64,21 @@ namespace Hont
 
         void Update()
         {
+            if (cameraInvisibleOptimize && !mOnBecameVisible) return;
+
             UpdateEffectPoints();
 
             UpdateMassPoint();
+        }
+
+        void OnBecameVisible()
+        {
+            mOnBecameVisible = true;
+        }
+
+        void OnBecameInvisible()
+        {
+            mOnBecameVisible = false;
         }
 
         void OnDrawGizmos()
@@ -105,6 +120,8 @@ namespace Hont
                 {
                     if (effectPoint.InteractFlag)
                         continue;
+
+                    Debug.Log("!!");
 
                     var minimumDistance = float.MaxValue;
                     var targetMassPoint = default(MassPoint);

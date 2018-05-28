@@ -14,6 +14,7 @@ public class PlaneWater2DInspector : Editor
 {
     SerializedProperty mSizeProp;
     SerializedProperty mVertexSegmentProp;
+    SerializedProperty mInvertNormalProp;
     SerializedProperty mInteractableAreaRangeProp;
     SerializedProperty mBaseTurbulentScaleProp;
     SerializedProperty mHookesLaw_kProp;
@@ -22,6 +23,7 @@ public class PlaneWater2DInspector : Editor
     SerializedProperty mVertexSpreadAtte_SecondProp;
     SerializedProperty mVertexSpreadAtte_ToWallProp;
     SerializedProperty mEffectPointListProp;
+    SerializedProperty mCameraInvisibleOptimizeProp;
     SerializedProperty mIsDrawGizmosProp;
 
     void Awake()
@@ -31,6 +33,8 @@ public class PlaneWater2DInspector : Editor
 
     public override void OnInspectorGUI()
     {
+        serializedObject.Update();
+
         if (mIsDrawGizmosProp == null)
             InitProperties();
 
@@ -40,6 +44,7 @@ public class PlaneWater2DInspector : Editor
         DrawSplitter();
         EditorGUILayout.PropertyField(mSizeProp);
         EditorGUILayout.PropertyField(mVertexSegmentProp);
+        EditorGUILayout.PropertyField(mInvertNormalProp);
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Clear Mesh"))
         {
@@ -63,6 +68,8 @@ public class PlaneWater2DInspector : Editor
         EditorGUILayout.PropertyField(mVertexSpreadAtteProp);
         EditorGUILayout.PropertyField(mVertexSpreadAtte_SecondProp);
         EditorGUILayout.PropertyField(mVertexSpreadAtte_ToWallProp);
+        DrawSplitter();
+        EditorGUILayout.PropertyField(mCameraInvisibleOptimizeProp);
 
         if (EditorGUI.EndChangeCheck())
             serializedObject.ApplyModifiedProperties();
@@ -105,6 +112,7 @@ public class PlaneWater2DInspector : Editor
     {
         mSizeProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.size));
         mVertexSegmentProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.vertexSegment));
+        mInvertNormalProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.invertNormal));
         mInteractableAreaRangeProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.interactableAreaRange));
         mBaseTurbulentScaleProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.baseTurbulentScale));
         mHookesLaw_kProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.hookesLaw_k));
@@ -114,6 +122,7 @@ public class PlaneWater2DInspector : Editor
         mVertexSpreadAtte_ToWallProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.vertexSpreadAtte_ContactToWall));
         mEffectPointListProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.effectPointList));
         mIsDrawGizmosProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.isDrawGizmos));
+        mCameraInvisibleOptimizeProp = serializedObject.FindProperty(GetFieldPath((PlaneWater2D c) => c.cameraInvisibleOptimize));
     }
 
     void ClearPlaneMesh()
@@ -149,10 +158,10 @@ public class PlaneWater2DInspector : Editor
             meshRenderer = planeWater2D.gameObject.AddComponent<MeshRenderer>();
 
         meshRenderer.material = new Material(Shader.Find("Standard"));
-        meshFilter.mesh = GetPlaneMesh(planeWater2D.size, planeWater2D.vertexSegment);
+        meshFilter.mesh = GetPlaneMesh(mSizeProp.vector2Value, mVertexSegmentProp.intValue, mInvertNormalProp.boolValue);
     }
 
-    Mesh GetPlaneMesh(Vector2 size, int segment)
+    Mesh GetPlaneMesh(Vector2 size, int segment, bool invertNormal)
     {
         var mesh = new Mesh();
         var triangles = new int[segment * 6];
@@ -163,13 +172,26 @@ public class PlaneWater2DInspector : Editor
             var self = i;
             var next = i + role;
 
-            triangles[(i * 6) + 0] = self;
-            triangles[(i * 6) + 1] = next + 1;
-            triangles[(i * 6) + 2] = self + 1;
+            if (invertNormal)
+            {
+                triangles[(i * 6) + 0] = self;
+                triangles[(i * 6) + 1] = next + 1;
+                triangles[(i * 6) + 2] = self + 1;
 
-            triangles[(i * 6) + 3] = self;
-            triangles[(i * 6) + 4] = next;
-            triangles[(i * 6) + 5] = next + 1;
+                triangles[(i * 6) + 3] = self;
+                triangles[(i * 6) + 4] = next;
+                triangles[(i * 6) + 5] = next + 1;
+            }
+            else
+            {
+                triangles[(i * 6) + 0] = self + 1;
+                triangles[(i * 6) + 1] = next + 1;
+                triangles[(i * 6) + 2] = self;
+
+                triangles[(i * 6) + 3] = next + 1;
+                triangles[(i * 6) + 4] = next;
+                triangles[(i * 6) + 5] = self;
+            }
         }
 
         var w = size.x / segment;
